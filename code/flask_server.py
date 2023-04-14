@@ -10,8 +10,8 @@ socketio = SocketIO(app)
 # flask_sock.Sock(app)
 
 @app.route('/')
-def index():
-    return render_template('index.html')
+def hello():
+    return "Hello, World!"
 
 
 @socketio.event
