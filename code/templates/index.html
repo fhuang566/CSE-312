@@ -1,0 +1,48 @@
+<html>
+<head>
+    <title>TopHat 404</title>
+    <!-- <link rel="stylesheet" type="text/css" href="style.css"/> -->
+</head>
+<body>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {{ messages[0][0] }}:
+        {{ messages[0][1] }}
+    {% endif %}
+  {% endwith %}
+
+<!-- <body onload="welcome();"> -->
+
+<h1>Wlecome to TopHat 404</h1>
+
+<div id="paragraph"></div>
+
+
+
+<!-- <script src="index.js"></script> -->
+
+<p>Please sign up or login</p>
+
+<form action="/register" id="image-form" method="post" enctype="multipart/form-data">
+    <label for="username">Username: </label>
+    <input id="username" name="username" cols="20" rows="1"></input>
+    <br/>
+    <label for="password">Password: </label>
+    <input id="password" name="password" type = "password" cols="20" rows="1"></input>
+    <br/>
+    <input type="submit" value="Register">
+ </form>
+
+ <form action="/login" id="image-form" method="post" enctype="multipart/form-data">
+    <label for="username">Username: </label>
+    <input id="username" name="username" cols="20" rows="1"></input>
+    <br/>
+    <label for="password">Password: </label>
+    <input id="password" name="password" type = "password" cols="20" rows="1"></input>
+    <br/>
+    <input type="submit" value="Login">
+ </form>
+
+<br/>
+</body>
+</html>

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Courses</title>
+    </head>
+    <script src="/static/courses.js"></script>
+
+    <body onload="load()">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {{ messages[0][0] }}:
+            {{ messages[0][1] }}
+        {% endif %}
+      {% endwith %}
+        <h1>Welcome back {{ username }}!</h1>
+        <br>
+        <h2>Create a Course</h2>
+        <form action="/createCourse" id="course-form" method="post" enctype="multipart/form-data">
+            <input id="coursename" type="text" name="coursename" placeholder="Course name"   cols="20" rows="1">
+            <br>
+            <input type="submit" value="Create">
+        </form>
+        <h1>My Courses</h1>
+        <br>
+        <div id ="myCourses"></div>
+        <b><a href="/">Link</a></b>
+        <br>
+        <h1>All Courses</h1>
+        <div id="allCourses"></div>
+    </body>
+
+
+</html>
