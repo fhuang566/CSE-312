@@ -10,9 +10,6 @@
     <h1>{{ coursename }}</h1>
     <br>
     <button onclick="window.location.href='/courses';">Back</button>
-    <form action="/enroll" id="enroll-form" method="post" enctype="multipart/form-data">
-        <div type="text" id="courseId" value = {{courseId}} ></div>
-        <input type="submit" value = "Enroll">
-    </form>
+    <button onclick="window.location.href='/enroll?courseId={{courseId}}';">Enroll</button>
 </body>
 </html>

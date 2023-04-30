@@ -78,7 +78,7 @@ def courses():
     #     hashed = hashlib.sha256(token.encode())
     #     user = auth_tokenCollection.find_one({"auth_token": hashed.digest()})
     #     if user:
-        return render_template('courses.html', username = auth )
+        return render_template('courses.html', username = escape(auth) )
 
     return "403	Forbidden", 403
 
@@ -90,18 +90,20 @@ def allCourses():
         cur = list(cur)
         for x in cur:
             del x['_id']
+            x["coursename"] = escape(x["coursename"])
+            x["instructor"] = escape(x["instructor"])
         return json.dumps(cur)
     
 @app.route('/myCourses')
 def myCourses():
     auth = funtions.authenticate(request.cookies.get("auth_token"), auth_tokenCollection)
     if auth:
-        cur = contentCollection.find({"instructor" : auth})
+        cur = coursesCollection.find({'$or': [{"instructor": auth}, {"students": auth}]})
         cur = list(cur)
-        cur1 = contentCollection.find({"students": auth })
-        cur = cur + list(cur1)
         for x in cur:
             del x['_id']
+            x["coursename"] = escape(x["coursename"])
+            x["instructor"] = escape(x["instructor"])
         return json.dumps(cur)
 
 
@@ -123,22 +125,25 @@ def create():
 
 @app.route('/course')
 def course():
+    courseid = request.args.get("courseId")
+    if not courseid:
+        return redirect("/courses")
     auth = funtions.authenticate(request.cookies.get("auth_token"), auth_tokenCollection)
-    course = coursesCollection.find_one({"courseId": request.args["courseId"]})
+    course = coursesCollection.find_one({"courseId": courseid})
     if auth and course:
         if course["instructor"] == auth:
             return render_template("instructorview.html")
-        elif auth in course["student"]:
-            return render_template("studenview.html")
+        elif auth in course["students"]:
+            return render_template("studentview.html")
         else:
-            return render_template("enroll.html", coursename = course["coursename"], courseId = course["courseId"])
+            return render_template("enroll.html", coursename = course["coursename"], courseId = courseid)
             
-@app.route('/enroll')
+@app.route('/enroll', methods=["GET", "POST"])
 def enroll():
     auth = funtions.authenticate(request.cookies.get("auth_token"), auth_tokenCollection)
-    #course = coursesCollection.find_one({"courseId": request.form["courseId"]})
     if auth:
-        print(request.form["courseId"])
+        coursesCollection.update_one({"courseId": request.args["courseId"]}, {"$push": {"students": auth}})
+        return redirect("/course?courseId=" + request.args["courseId"])
 
 if __name__ == '__main__':
     socketio.run(app, debug = True, host='0.0.0.0', port = 8000, allow_unsafe_werkzeug=True)

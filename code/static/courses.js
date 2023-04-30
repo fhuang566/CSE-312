@@ -27,11 +27,11 @@ function get_myCourses() {
         if (this.readyState === 4 && this.status === 200) {
             const courses = JSON.parse(this.response);
             for (const course of courses) {
-                addCourse(course, "myCourse");
+                addCourse(course, "myCourses");
             }
         }
     };
-    request.open("GET", "/myCourse");
+    request.open("GET", "/myCourses");
     request.send();
 }
 
