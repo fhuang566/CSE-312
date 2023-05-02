@@ -4,9 +4,61 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>{{coursename}}</title>
 </head>
-<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
+<script src="/static/instructor.js"></script>
+<body onload="loadCourse()">
     
+    <h1>{{coursename}}</h1>
+    <br>
+    <!-- <h2>Create mutltiple choice myQuestions</h2> -->
+    <form>
+        <fieldset>
+            <legend>Create mutltiple choice Questions</legend>
+            <div>
+                <input id="quetionId" name="questionId" value={{questionId}} hidden>
+                <input id="type" name="type" value="question-create" hidden>
+                <input id="active" name="active" value="false" hidden>
+                <br>
+                <textarea type="text" id="question" name="question" cols="40" rows="10" placeholder="Enter your questions here" required minlength="1"></textarea>
+                <br>
+
+                <label for="choice-a">Choice a: </label>
+                <input type="text" id="choice-a" name="choice-a" size="50" placeholder="Enter choice a here" required minlength="1">
+                <br>
+
+                <label for="choice-b">Choice b: </label>
+                <input type="text" id="choice-b" name="choice-b" size="50" placeholder="Enter choice b here" required minlength="1">
+                <br>
+
+                <label for="choice-c">Choice c: </label>
+                <input type="text" id="choice-c" name="choice-c" size="50" placeholder="Enter choice c here" required minlength="1">
+                <br>
+
+                <label for="choice-d">Choice d: </label>
+                <input type="text" id="choice-d" name="choice-d" size="50" placeholder="Enter choice d here" required minlength="1">
+                <br>
+
+                <label for="choice-e">Choice e: </label>
+                <input type="text" id="choice-e" name="choice-e" size="50" placeholder="Enter choice e here" required minlength="1">
+
+                <p>Select the correct answer:</p>
+
+                <input id='a' name='correct-answer' type='checkbox' value='a'>a</input>  
+                <input id='b' name='correct-answer' type='checkbox' value='b'>b</input>
+                <input id='c' name='correct-answer' type='checkbox' value='c'>c</input>
+                <input id='d' name='correct-answer' type='checkbox' value='d'>d</input>
+                <input id='e' name='correct-answer' type='checkbox' value='e'>e</input>
+            </div>
+            <div>
+                <button type="submit">Create</button>
+            </div>
+        </fieldset>
+    </form>
+    <br>
+    <h1>MyQuestions:</h1>
+    <br>
+    <div id ="myQuestions"></div>
 </body>
 </html>

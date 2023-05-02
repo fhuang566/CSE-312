@@ -6,7 +6,7 @@ import funtions
 import json
 from datetime import datetime, timedelta, timezone
 from flask import Flask, render_template, request, redirect, flash, make_response, url_for
-from flask_socketio import SocketIO
+from flask_socketio import SocketIO, send, emit, join_room
 from markupsafe import escape
 
 app = Flask(__name__)
@@ -105,6 +105,14 @@ def myCourses():
             x["coursename"] = escape(x["coursename"])
             x["instructor"] = escape(x["instructor"])
         return json.dumps(cur)
+    
+@app.route('/myQuestions')
+def myQuestions():
+    auth = funtions.authenticate(request.cookies.get("auth_token"), auth_tokenCollection)
+    if auth:
+        cur = coursesCollection.find_one({"courseId": request.args.get("courseId")})
+        if cur:
+            return json.dumps(cur["questions"])
 
 
 @app.route('/createCourse', methods=["POST"])
@@ -117,7 +125,7 @@ def create():
             return redirect("/courses")
         else:
             courseId = secrets.token_urlsafe(8)
-            course = {"courseId": courseId, "coursename": coursename, "instructor": auth, "students": []}
+            course = {"courseId": courseId, "coursename": coursename, "instructor": auth, "students": [], "questions": []}
             coursesCollection.insert_one(course)
             return redirect("/course?courseId=" + courseId )
     return "403	Forbidden", 403
@@ -132,7 +140,15 @@ def course():
     course = coursesCollection.find_one({"courseId": courseid})
     if auth and course:
         if course["instructor"] == auth:
-            return render_template("instructorview.html")
+            cur = coursesCollection.aggregate([{"$match": {"courseId": courseid}}, {"$limit": 1}, {"$project": {"coursename": 1, "numberOfQuestions": {"$size": "$questions"}}}])
+            
+            y = {}
+            for x in cur:
+                y.update(x)
+            
+            numberOfQuestions = y["numberOfQuestions"]
+            print(numberOfQuestions)
+            return render_template("instructorview.html", coursename  = escape(y["coursename"]), questionId = numberOfQuestions+1)
         elif auth in course["students"]:
             return render_template("studentview.html")
         else:
@@ -144,6 +160,26 @@ def enroll():
     if auth:
         coursesCollection.update_one({"courseId": request.args["courseId"]}, {"$push": {"students": auth}})
         return redirect("/course?courseId=" + request.args["courseId"])
+    
+@socketio.on('message')
+def handel_message(data):
+    print(data)
+    data = json.loads(data)
+    course = data["courseId"]
+    messageType = data["type"]
+    del data["courseId"]
+    del data["type"]
+    for x in data.keys():
+        data[x] = escape(data[x])
+    if messageType == "question-create":
+        coursesCollection.update_one({"courseId": course}, {"$push": {"questions": data}})
+        send(data, room=course)
+    
+    
+@socketio.on('join')
+def join(data):
+    join_room(data['room'])
+    print("join room")
 
 if __name__ == '__main__':
     socketio.run(app, debug = True, host='0.0.0.0', port = 8000, allow_unsafe_werkzeug=True)
