@@ -10,3 +10,10 @@ def authenticate(token, collection):
         if user:
             return user["username"]
     return False
+
+def xsrf_auth(token, collection):
+    if token:
+        user = collection.find_one({"xsrf_token": token})
+        if user:
+            return user["username"]
+    return False

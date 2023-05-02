@@ -5,7 +5,7 @@ const courseId = urlParams.get('courseId');
 
 document.addEventListener('DOMContentLoaded', () => {
     // create websocket connection
-    var socket = io();
+    var socket = io.connect({query:{"token": document.getElementById("xsrf_token").value}});
 
     //upon connecting, join room, room name = courseid
     socket.on('connect', function() {
@@ -37,8 +37,8 @@ document.addEventListener('DOMContentLoaded', () => {
 function addQuestion(data) {
     const choices = ['a', 'b', 'c', 'd', 'e'];
     var template = "<form><fieldset><div><input disabled id='quetionId' name='questionId' value=" + data["questionId"] + 
-    " hidden><input disabled id='type' name='type' value='question-create' hidden><input diabled id='active' name='active' value='false' hidden><br><textarea disabled type='text' id='question' name='questions' cols='40' rows='10' placeholder=" + data["question"]+
-    " required minlength='1'></textarea><br><label  for='choice-a'>Choice a: </label><input disabled type='text' id='choice-a' name='choice-a' size='50' placeholder=" + data["choice-a"] +
+    " hidden><input disabled id='type' name='type' value='question-create' hidden><input diabled id='active' name='active' value='false' hidden><br><textarea disabled type='text' id='question' name='questions' cols='40' rows='10' placeholder=\'" + data["question"]+
+    "\' required minlength='1'></textarea><br><label  for='choice-a'>Choice a: </label><input disabled type='text' id='choice-a' name='choice-a' size='50' placeholder=" + data["choice-a"] +
     " required minlength='1'><br><label  for='choice-b'>Choice b: </label><input disabled type='text' id='choice-b' name='choice-b' size='50' placeholder=" + data["choice-b"] + 
     " required minlength='1'><br><label  for='choice-c'>Choice c: </label><input disabled type='text' id='choice-c' name='choice-c' size='50' placeholder=" + data["choice-c"] +
     " required minlength='1'><br><label  for='choice-d'>Choice d: </label><input disabled type='text' id='choice-d' name='choice-d' size='50' placeholder=" + data["choice-d"] +

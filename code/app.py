@@ -2,7 +2,7 @@ import bcrypt
 import pymongo
 import secrets
 import hashlib
-import funtions
+import functions
 import json
 from datetime import datetime, timedelta, timezone
 from flask import Flask, render_template, request, redirect, flash, make_response, url_for
@@ -72,7 +72,7 @@ def login():
 
 @app.route('/courses', methods=["GET"])
 def courses():
-    auth = funtions.authenticate(request.cookies.get("auth_token"), auth_tokenCollection)
+    auth = functions.authenticate(request.cookies.get("auth_token"), auth_tokenCollection)
     if auth:
     # if token:
     #     hashed = hashlib.sha256(token.encode())
@@ -84,7 +84,7 @@ def courses():
 
 @app.route('/allCourses')
 def allCourses():
-    auth = funtions.authenticate(request.cookies.get("auth_token"), auth_tokenCollection)
+    auth = functions.authenticate(request.cookies.get("auth_token"), auth_tokenCollection)
     if auth:
         cur = coursesCollection.find({})
         cur = list(cur)
@@ -96,7 +96,7 @@ def allCourses():
     
 @app.route('/myCourses')
 def myCourses():
-    auth = funtions.authenticate(request.cookies.get("auth_token"), auth_tokenCollection)
+    auth = functions.authenticate(request.cookies.get("auth_token"), auth_tokenCollection)
     if auth:
         cur = coursesCollection.find({'$or': [{"instructor": auth}, {"students": auth}]})
         cur = list(cur)
@@ -108,7 +108,7 @@ def myCourses():
     
 @app.route('/myQuestions')
 def myQuestions():
-    auth = funtions.authenticate(request.cookies.get("auth_token"), auth_tokenCollection)
+    auth = functions.authenticate(request.cookies.get("auth_token"), auth_tokenCollection)
     if auth:
         cur = coursesCollection.find_one({"courseId": request.args.get("courseId")})
         if cur:
@@ -117,7 +117,7 @@ def myQuestions():
 
 @app.route('/createCourse', methods=["POST"])
 def create():
-    auth = funtions.authenticate(request.cookies.get("auth_token"), auth_tokenCollection)
+    auth = functions.authenticate(request.cookies.get("auth_token"), auth_tokenCollection)
     if auth:
         coursename = request.form["coursename"]
         if len(coursename) == 0 and coursename.isspace():
@@ -136,9 +136,11 @@ def course():
     courseid = request.args.get("courseId")
     if not courseid:
         return redirect("/courses")
-    auth = funtions.authenticate(request.cookies.get("auth_token"), auth_tokenCollection)
+    auth = functions.authenticate(request.cookies.get("auth_token"), auth_tokenCollection)
     course = coursesCollection.find_one({"courseId": courseid})
     if auth and course:
+        token = secrets.token_urlsafe(16)
+        xsrf_tokenCollection.update_one({"username": auth}, {"$set":{"username": auth, "xsrf_token": token}}, upsert=True)
         if course["instructor"] == auth:
             cur = coursesCollection.aggregate([{"$match": {"courseId": courseid}}, {"$limit": 1}, {"$project": {"coursename": 1, "numberOfQuestions": {"$size": "$questions"}}}])
             
@@ -148,7 +150,7 @@ def course():
             
             numberOfQuestions = y["numberOfQuestions"]
             print(numberOfQuestions)
-            return render_template("instructorview.html", coursename  = escape(y["coursename"]), questionId = numberOfQuestions+1)
+            return render_template("instructorview.html", coursename  = escape(y["coursename"]), questionId = numberOfQuestions+1, xsrf_token = token)
         elif auth in course["students"]:
             return render_template("studentview.html")
         else:
@@ -156,11 +158,19 @@ def course():
             
 @app.route('/enroll', methods=["GET", "POST"])
 def enroll():
-    auth = funtions.authenticate(request.cookies.get("auth_token"), auth_tokenCollection)
+    auth = functions.authenticate(request.cookies.get("auth_token"), auth_tokenCollection)
     if auth:
         coursesCollection.update_one({"courseId": request.args["courseId"]}, {"$push": {"students": auth}})
         return redirect("/course?courseId=" + request.args["courseId"])
     
+
+@socketio.on('connect')
+def connect_handler():
+    auth = functions.xsrf_auth(request.args.get("token"), xsrf_tokenCollection)
+    if auth == False:
+        raise ConnectionRefusedError("unauthorized")
+    
+
 @socketio.on('message')
 def handel_message(data):
     print(data)
