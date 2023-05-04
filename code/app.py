@@ -20,7 +20,7 @@ contentCollection = db["content"]
 auth_tokenCollection = db["auth_token"]
 xsrf_tokenCollection = db["xsrf_token"]
 coursesCollection = db['courses']
-
+instructors = {}
 
 @app.route('/')
 def index():
@@ -111,8 +111,13 @@ def myQuestions():
     auth = functions.authenticate(request.cookies.get("auth_token"), auth_tokenCollection)
     if auth:
         cur = coursesCollection.find_one({"courseId": request.args.get("courseId")})
+
         if cur:
-            return json.dumps(cur["questions"])
+            ret = cur['questions']
+            if cur['instructor'] != auth:
+                for x in ret:
+                    del x['correct-answer']
+            return json.dumps(ret)
 
 
 @app.route('/createCourse', methods=["POST"])
@@ -152,7 +157,7 @@ def course():
             print(numberOfQuestions)
             return render_template("instructorview.html", coursename  = escape(y["coursename"]), questionId = numberOfQuestions+1, xsrf_token = token)
         elif auth in course["students"]:
-            return render_template("studentview.html")
+            return render_template("studentview.html", coursename  = escape(course["coursename"]), xsrf_token = token)
         else:
             return render_template("enroll.html", coursename = course["coursename"], courseId = courseid)
             
@@ -162,7 +167,8 @@ def enroll():
     if auth:
         coursesCollection.update_one({"courseId": request.args["courseId"]}, {"$push": {"students": auth}})
         return redirect("/course?courseId=" + request.args["courseId"])
-    
+        
+
 
 @socketio.on('connect')
 def connect_handler():
@@ -178,11 +184,18 @@ def handel_message(data):
     course = data["courseId"]
     messageType = data["type"]
     del data["courseId"]
-    del data["type"]
-    for x in data.keys():
-        data[x] = escape(data[x])
     if messageType == "question-create":
+        del data["type"]
+        if len(data["correct-answer"]) > 1:
+            data["mutiple-ans"] = True
+        else:
+            data["mutiple-ans"] = False
+        for x in data.keys():
+            if x != 'correct-answer':
+                data[x] = escape(data[x])
         coursesCollection.update_one({"courseId": course}, {"$push": {"questions": data}})
+        send(data)
+        del data['correct-answer']
         send(data, room=course)
     
     

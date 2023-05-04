@@ -7,14 +7,14 @@
     <title>{{coursename}}</title>
 </head>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
-<script src="/static/instructor.js"></script>
+<script src="/static/functions.js"></script>
 <body onload="loadCourse()">
     
     <h1>{{coursename}}</h1>
     <br>
     <!-- <h2>Create mutltiple choice myQuestions</h2> -->
     <input id="xsrf_token" value={{xsrf_token}} hidden>
-    <form>
+    <form id="questionForm">
         <fieldset>
             <legend>Create mutltiple choice Questions</legend>
             <div>
@@ -57,6 +57,8 @@
             </div>
         </fieldset>
     </form>
+    <button type="button" onclick="startall()">Start all Questions</button>
+    <button type="button" onclick="stopall()">Stop all Questions</button>
     <br>
     <h1>MyQuestions:</h1>
     <br>
