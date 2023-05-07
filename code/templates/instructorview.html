@@ -18,9 +18,8 @@
         <fieldset>
             <legend>Create mutltiple choice Questions</legend>
             <div>
-                <input id="quetionId" name="questionId" value={{questionId}} hidden>
                 <input id="type" name="type" value="question-create" hidden>
-                <input id="active" name="active" value="false" hidden>
+                <input id="active" name="active" value="Stopped" hidden>
                 <br>
                 <textarea type="text" id="question" name="question" cols="40" rows="10" placeholder="Enter your questions here" required minlength="1"></textarea>
                 <br>
@@ -57,8 +56,8 @@
             </div>
         </fieldset>
     </form>
-    <button type="button" onclick="startall()">Start all Questions</button>
-    <button type="button" onclick="stopall()">Stop all Questions</button>
+    <button type="button" onclick="stAll('Started')">Start all Questions</button>
+    <button type="button" onclick="stAll('Stopped')">Stop all Questions</button>
     <br>
     <h1>MyQuestions:</h1>
     <br>

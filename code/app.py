@@ -4,6 +4,7 @@ import secrets
 import hashlib
 import functions
 import json
+import random
 from datetime import datetime, timedelta, timezone
 from flask import Flask, render_template, request, redirect, flash, make_response, url_for
 from flask_socketio import SocketIO, send, emit, join_room
@@ -63,7 +64,7 @@ def login():
             auth_token = secrets.token_urlsafe(16)
             auth_tokenCollection.update_one({"username": username}, {"$set":{"username": username, "auth_token": hashlib.sha256(auth_token.encode()).digest()}}, upsert=True)
             response = make_response(redirect('/courses'))
-            response.set_cookie("auth_token",  auth_token, path="/", expires=expiredate, secure=True, httponly=True)
+            response.set_cookie("auth_token",  auth_token, domain='localhost', path="/", expires=expiredate, httponly=True, secure=True, samesite='Lax')
             return response
 
     
@@ -132,6 +133,7 @@ def create():
             courseId = secrets.token_urlsafe(8)
             course = {"courseId": courseId, "coursename": coursename, "instructor": auth, "students": [], "questions": []}
             coursesCollection.insert_one(course)
+            userCollection.update_one({'username': auth}, {"$set": {courseId:{}}}, upsert=True)
             return redirect("/course?courseId=" + courseId )
     return "403	Forbidden", 403
         
@@ -153,9 +155,9 @@ def course():
             for x in cur:
                 y.update(x)
             
-            numberOfQuestions = y["numberOfQuestions"]
-            print(numberOfQuestions)
-            return render_template("instructorview.html", coursename  = escape(y["coursename"]), questionId = numberOfQuestions+1, xsrf_token = token)
+            # numberOfQuestions = y["numberOfQuestions"]
+            # print(numberOfQuestions)
+            return render_template("instructorview.html", coursename  = escape(y["coursename"]), xsrf_token = token)
         elif auth in course["students"]:
             return render_template("studentview.html", coursename  = escape(course["coursename"]), xsrf_token = token)
         else:
@@ -166,6 +168,7 @@ def enroll():
     auth = functions.authenticate(request.cookies.get("auth_token"), auth_tokenCollection)
     if auth:
         coursesCollection.update_one({"courseId": request.args["courseId"]}, {"$push": {"students": auth}})
+        userCollection.update_one({'username': auth}, {"$set": {request.args["courseId"]:{}}}, upsert=True)
         return redirect("/course?courseId=" + request.args["courseId"])
         
 
@@ -175,34 +178,124 @@ def connect_handler():
     auth = functions.xsrf_auth(request.args.get("token"), xsrf_tokenCollection)
     if auth == False:
         raise ConnectionRefusedError("unauthorized")
+        
     
 
 @socketio.on('message')
 def handel_message(data):
     print(data)
     data = json.loads(data)
-    course = data["courseId"]
+    user = functions.xsrf_auth(data.get('xsrf_token'), xsrf_tokenCollection)
+    if user == False:
+        return None
+    
     messageType = data["type"]
-    del data["courseId"]
+    course = data["courseId"]
+    print(data)
+    
     if messageType == "question-create":
+        cur = coursesCollection.find_one({"instructor": user})
+        if cur == None:
+            return None
+        del data["courseId"]
         del data["type"]
         if len(data["correct-answer"]) > 1:
             data["mutiple-ans"] = True
         else:
             data["mutiple-ans"] = False
         for x in data.keys():
-            if x != 'correct-answer':
+            if x != "correct-answer":
                 data[x] = escape(data[x])
+        cur = coursesCollection.aggregate([{"$match": {"courseId": course}}, {"$limit": 1}, {"$project": {"coursename": 1, "numberOfQuestions": {"$size": "$questions"}}}])
+            
+        y = {}
+        for x in cur:
+            y.update(x)
+            
+        numberOfQuestions = y["numberOfQuestions"]
+        data['questionId'] = str(numberOfQuestions+1)
         coursesCollection.update_one({"courseId": course}, {"$push": {"questions": data}})
-        send(data)
-        del data['correct-answer']
-        send(data, room=course)
+        send(data, to=course+"ins")
+        del data["correct-answer"]
+        send(data, to=course)
+    elif messageType == "st":
+        if coursesCollection.find_one({'courseId': data['courseId']})['instructor'] != user:
+            print('unauth')
+            return None
+        if data['st'] == 'Started':
+            coursesCollection.update_one({"courseId": data["courseId"], "questions.questionId": data['id']}, {"$set":{"questions.$.active": "Started"}})
+            
+        elif data['st'] == 'Stopped':
+            coursesCollection.update_one({"courseId": data["courseId"], "questions.questionId": data['id']}, {"$set":{"questions.$.active": "Stopped"}})
+            score = userCollection.find_one({'username': user})
+            # print(score)
+            # grade=score[data["courseId"]].get(data["id"], 0)
+            # ret = {"type": "score", "id": data["id"], "grade": grade}
+            # print(ret)
+            # send(ret, to=course)
+        send(data, to=course+"ins")
+        send(data, to=course)
+    elif messageType == 'question-submit':
+        print(data)
+        cur = coursesCollection.find_one({'courseId': data["courseId"]}, {"_id":0, 'questions': {"$elemMatch": {'questionId': data['id']}}})
+        if cur:
+            print(cur)
+            if cur['questions'][0]['active'] == "Started":
+                correct_ans = cur['questions'][0]['correct-answer']
+                numMatch = 0
+                for x in data['ans']:
+                    if x in correct_ans:
+                        numMatch += 1
+                grade = numMatch / len(correct_ans)
+                print(data)
+                print(grade)
+                userCollection.update_one({'username': user}, {"$set": {data['courseId'] + "." + data["id"]: grade}}, upsert=True)
+                # ret = {"type": "score", "id": data["id"], "grade": grade}
+                # send(ret, to=course)
+    elif messageType == 'score':
+        score = userCollection.find_one({'username': user})
+        print(score)
+        grade=score[data["courseId"]].get(data["id"], 0)
+        ret = {"type": "score", "id": data["id"], "grade": grade}
+        print(ret)
+        send(ret)
+    elif messageType == 'stAll':
+        if coursesCollection.find_one({'courseId': data['courseId']})['instructor'] != user:
+            return None
+        if data['st'] == 'Started':
+            coursesCollection.update_many({"courseId": data["courseId"]}, {"$set":{"questions.$[].active": "Started"}})
+            
+        elif data['st'] == 'Stopped':
+            coursesCollection.update_many({"courseId": data["courseId"]}, {"$set":{"questions.$[].active": "Stopped"}})
+            # print(score)
+            # grade=score[data["courseId"]].get(data["id"], 0)
+            # ret = {"type": "score", "id": data["id"], "grade": grade}
+            # print(ret)
+            # send(ret, to=course)
+        ret = {'type': 'stAll', 'st': data['st']}
+        questions = coursesCollection.find_one({'courseId': data['courseId']})['questions']
+        print(questions)
+        idlist = []
+        for x in questions:
+            idlist.append(x['questionId'])
+        print(idlist)
+        ret['id'] = idlist
+        send(ret, to=course+"ins")
+        send(ret, to=course)
+
+
+        
     
     
 @socketio.on('join')
 def join(data):
-    join_room(data['room'])
-    print("join room")
+    cur = xsrf_tokenCollection.find_one({"xsrf_token": data["xsrf_token"]})
+    course = coursesCollection.find_one({"courseId": data["courseId"]})
+    if course["instructor"] == cur["username"]:
+        join_room(data["courseId"] + "ins")
+        print("join room")
+    else:
+        join_room(data["courseId"])
 
 if __name__ == '__main__':
     socketio.run(app, debug = True, host='0.0.0.0', port = 8000, allow_unsafe_werkzeug=True)
