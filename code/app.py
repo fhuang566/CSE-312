@@ -60,7 +60,7 @@ def login():
         if bcrypt.checkpw(password.encode(), user["password"]):
             print("logged in")
             expire = datetime.now(timezone.utc) + timedelta(days=30)
-            expiredate = expire.strftime("%a, %d-%b-%Y %H:%M:%S GMT;")
+            expiredate = expire.strftime("%a, %d-%b-%Y %H:%M:%S GMT")
             auth_token = secrets.token_urlsafe(16)
             auth_tokenCollection.update_one({"username": username}, {"$set":{"username": username, "auth_token": hashlib.sha256(auth_token.encode()).digest()}}, upsert=True)
             response = make_response(redirect('/courses'))
@@ -71,9 +71,10 @@ def login():
     flash("Incorrect username or password. Try again!", "error")
     return redirect("/")
 
-@app.route('/courses', methods=["GET"])
+@app.route('/courses', methods=["GET", "POST"])
 def courses():
     auth = functions.authenticate(request.cookies.get("auth_token"), auth_tokenCollection)
+    print(auth)
     if auth:
     # if token:
     #     hashed = hashlib.sha256(token.encode())
