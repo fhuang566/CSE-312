@@ -6,7 +6,7 @@ var socket;
 
 document.addEventListener('DOMContentLoaded', () => {
     // create websocket connection
-    socket = io.connect({query:{"token": document.getElementById("xsrf_token").value}});
+    socket = io.connect({transports: ['websocket'], upgrade: false, query:{"token": document.getElementById("xsrf_token").value}});
 
     // //upon connecting, join room, room name = courseid
     socket.on('connect', function() {
