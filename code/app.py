@@ -64,7 +64,7 @@ def login():
             auth_token = secrets.token_urlsafe(16)
             auth_tokenCollection.update_one({"username": username}, {"$set":{"username": username, "auth_token": hashlib.sha256(auth_token.encode()).digest()}}, upsert=True)
             response = make_response(redirect('/courses'))
-            response.set_cookie("auth_token",  auth_token, path="/", expires=expiredate, httponly=True, secure=True, samesite='Lax')
+            response.set_cookie("auth_token",  auth_token, path="/", expires=expiredate, httponly=True, secure=True)
             return response
 
     
