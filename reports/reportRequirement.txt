@@ -1,3 +1,0 @@
-1. We want to show the whole chain that how did we get from our code(framework code) to our homework code.
-For example: flask.app.Flask.run() -> werkzeug.serving.run_simple() -> socketserver.TCPServer.serve_forever()
-2. Attach the github permalink to report
