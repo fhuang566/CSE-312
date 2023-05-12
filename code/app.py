@@ -27,7 +27,9 @@ instructors = {}
 def index():
     token = request.cookies.get("auth_token")
     if token:
-        return redirect("/courses")
+        auth = functions.authenticate(token, auth_tokenCollection)
+        if auth:
+            return redirect("/courses")
     return render_template('index.html')
 
 @app.route('/register', methods=["POST"])
